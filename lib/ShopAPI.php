@@ -22,18 +22,18 @@ class ShopAPI extends ShopBase{
 		$this->CODE = $err_code;
 	}
 	
-	private function IsProductParamsCorrect($name, $is_enbaled, $annonce, $desciption){
+	private function IsProductParamsCorrect($name, $is_enabled, $announce, $description){
 		//здесь можно реализовать проверку корректности данных перед вставкой в БД
 		return true;
 	}
 	
-	private function IsCategoryParamsCorrect($name, $is_enbaled){
+	private function IsCategoryParamsCorrect($name, $is_enabled){
 		//здесь можно реализовать проверку корректности данных перед вставкой в БД
 		return true;
 	}
 	
 	private function IsCategoryProductParamsCorrect($category, $product){
-		//здесь можно проверить корректность данных, в том числе и то, что такая категория и такой товар существуют
+		//здесь можно проверить корректность данных
 		return true;
 	}
 
@@ -50,7 +50,7 @@ class ShopAPI extends ShopBase{
 			if(is_array($categories) && !empty($categories)){
 				foreach($categories as $category){
 					//подсчитываем количество товара
-					$tmp = $this->get_category_products($category["id"]);
+					$tmp = $this->get_category_products($category["id"], false);
 					$category["count_products"] = count($tmp);
 					$result[] = $category;
 				}
@@ -75,18 +75,23 @@ class ShopAPI extends ShopBase{
 		return $result;
 	}
 	
-	public function AddProduct($name, $is_enbaled=1, $annonce=NULL, $desciption=NULL){
-		if($this->IsProductParamsCorrect($name, $is_enbaled, $annonce, $desciption)){	
-			$result = $this->add_product($name, $is_enbaled, $annonce, $desciption);
+	public function AddProduct($name, $is_enabled=1, $announce=NULL, $description=NULL){
+		if($this->IsProductParamsCorrect($name, $is_enabled, $announce, $description)){	
+			$result = $this->add_product($name, $is_enabled, $announce, $description);
 		} else{
 			throw new Exception("Товар не добавлен: некорректные параметры", -1);
 		}		
 		return $result;
 	}
 	
-	public function UpdateProduct($id, $name, $is_enbaled=1, $annonce=NULL, $desciption=NULL){
-		if($this->IsProductParamsCorrect($name, $is_enbaled, $annonce, $desciption)){
-			$result = $this->update_product($is_enbaled, $name, $annonce, $desciption, $id);
+	public function UpdateProduct($id, $name, $is_enabled=1, $announce=NULL, $description=NULL){
+		if($this->IsProductParamsCorrect($name, $is_enabled, $announce, $description)){
+			if($this->product_exists($id)){
+				$result = $this->update_product($id, $name, $is_enabled, $announce, $description);
+			}else{
+				throw new Exception("Товар не обновлен: товар с идентификатором {$id} не найден", -1);
+			}
+			
 		} else{
 			throw new Exception("Товар не обновлен: некорректные параметры", -1);
 		}			
@@ -94,12 +99,21 @@ class ShopAPI extends ShopBase{
 	}
 	
 	public function DeleteProduct($id){
-		$result = $this->delete_product($id);
+		if($this->product_exists($id)){
+			$result = $this->delete_product($id);
+		}else{
+			throw new Exception("Товар не удален: товар с идентификатором {$id} не найден", -1);
+		}
+		
 		return $result;
 	}	
 	
 	public function AddCategoryProduct($category, $product){
 		if($this->IsCategoryProductParamsCorrect($category, $product)){
+			if(!$this->category_exists($category)) 
+				throw new Exception("Товар не добавлен в категорию: не найдена категория {$category}");
+			if(!$this->product_exists($product)) 
+				throw new Exception("Товар не добавлен в категорию: не найден товар {$product}");
 			$result = $this->add_category_product($category, $product);
 		}  else{
 			throw new Exception("Товар не добавлен в категорию: некорректные параметры", -1);
@@ -108,6 +122,10 @@ class ShopAPI extends ShopBase{
 	}
 
 	public function DeleteCategoryProduct($category, $product){
+		if(!$this->category_exists($category)) 
+			throw new Exception("Товар не удален из категории: не найдена категория {$category}");
+		if(!$this->product_exists($product)) 
+			throw new Exception("Товар не удален из категории: не найден товар {$product}");
 		return $this->delete_category_product($category, $product);
 	}
 	
@@ -123,7 +141,9 @@ class ShopAPI extends ShopBase{
 	
 	public function UpdateCategory($id, $name, $parent, $is_enabled=1){
 		if($this->IsCategoryParamsCorrect($name, $parent, $is_enabled)){
-			$result = $this->update_category($is_enabled, $name, $parent, $id);
+			if(!$this->category_exists($id)) 
+				throw new Exception("Категория не обновлена: не найдена категория {$id}");
+			$result = $this->update_category($id, $name, $parent, $is_enabled);
 		}else{
 			throw new Exception("Категория не обновлена: некорректные параметры", -1);
 		}				
@@ -133,6 +153,8 @@ class ShopAPI extends ShopBase{
 	//если only_empty=false - удаляет категорию вместе с товарами в этой категории
 	//иначе - не удаляет категорию, в которой имеются товары
 	public function DeleteCategory($id, $only_empty=true){
+		if(!$this->category_exists($id)) 
+			throw new Exception("Категория удалить не удалось: не найдена категория {$id}");
 		$result = $this->delete_category($id, $only_empty);
 		if($result===false){
 			throw new Exception("Категорию удалить не удалось. Возможно, в ней содержатся товары или подкатегории", -1);
@@ -163,22 +185,22 @@ class ShopAPI extends ShopBase{
 				//добавить товар
 				case "add_product":
 					$name 		= $this->GetParam("name", 		$params);
-					$is_enbaled = $this->GetParam("is_enbaled", $params, 1);
-					$annonce 	= $this->GetParam("annonce", 	$params);
-					$desciption = $this->GetParam("desciption", $params);
+					$is_enabled = $this->GetParam("is_enabled", $params, 1);
+					$announce 	= $this->GetParam("announce", 	$params);
+					$description = $this->GetParam("description", $params);
 					
-					$this->RESPONSE = $this->AddProduct($name, $is_enbaled, $annonce, $desciption);
+					$this->RESPONSE = $this->AddProduct($name, $is_enabled, $announce, $description);
 					break;
 				
 				//обновить информацию о товаре
 				case "update_product":
 					$id 		= $this->GetParam("id", 		$params);
 					$name 		= $this->GetParam("name", 		$params);
-					$is_enbaled = $this->GetParam("is_enbaled", $params, 1);
-					$annonce 	= $this->GetParam("annonce", 	$params);
-					$desciption = $this->GetParam("desciption", $params);
+					$is_enabled = $this->GetParam("is_enabled", $params, 1);
+					$announce 	= $this->GetParam("announce", 	$params);
+					$description = $this->GetParam("description", $params);
 					
-					$this->RESPONSE = $this->UpdateProduct($id, $name, $is_enbaled, $annonce, $desciption);
+					$this->RESPONSE = $this->UpdateProduct($id, $name, $is_enabled, $announce, $description);
 					break;
 				
 				//удалить товар
@@ -210,11 +232,11 @@ class ShopAPI extends ShopBase{
 					$this->RESPONSE = $this->AddCategory($name, $parent, $is_enabled);
 					break;
 				
-				//добавить категорию
+				//обновить категорию
 				case "update_category":
 					$id 		= $this->GetParam("id", 		$params);
 					$name 		= $this->GetParam("name", 		$params);
-					$is_enbaled = $this->GetParam("is_enbaled", $params, 1);
+					$is_enabled = $this->GetParam("is_enabled", $params, 1);
 					$parent 	= $this->GetParam("parent", 	$params);
 					
 					$this->RESPONSE = $this->UpdateCategory($id, $name, $parent, $is_enabled);
@@ -229,7 +251,7 @@ class ShopAPI extends ShopBase{
 					break;
 					
 				default:
-					throw new Exception("Вызван неизвезтный метод: {$action}", -2);
+					throw new Exception("Вызван неизвестный метод: {$action}", -2);
 					break;
 			}
 		}

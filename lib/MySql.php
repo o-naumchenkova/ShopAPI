@@ -57,7 +57,7 @@ class MySqlWork{
 	
 	//для запросов, не требующих возвращаемых ответов, таких как create, upd, del (при вставке возвращается id добавленной записи)
 	public function querySimple($query, $params = false){
-		$res = $this->query($query, $params) ;
+		$this->query($query, $params) ;
 		
 		if($this->mysqli->insert_id === 0){
 			$result = true;
@@ -72,6 +72,12 @@ class MySqlWork{
 	public function queryArray($query, $params = false){
 		$res = $this->query($query, $params) ;		
 		return $this->resultToArray($res);
+	}
+	
+	//для запросов, возвращающих скалярное значение
+	public function queryScalar($query, $params = false){
+		$res = $this->query($query, $params) ;		
+		return $res->fetch_row()[0];
 	}
   
   	private function query($query, $params = false) {
@@ -91,5 +97,30 @@ class MySqlWork{
 		}
 		return $result;
 	}
+  
+	/*
+	public function query($query, $params = false) {
+		$query = $this->prepareQuery($query, $params) ;
+		//print_r($this->prepareQuery($query, $params));
+	//	return ; 
+		$success = $this->mysqli->query($query) ;
+
+		if ($success) {
+			if($this->mysqli->insert_id === 0){
+				if($this->mysqli->affected_rows){
+					$result = $this->resultToArray($success);
+				}else{
+					$result = true;
+				}
+			}else{
+				$result = $this->mysqli->insert_id;				
+			}
+		}
+		else {
+			$result = array(is_error=>1, error_text=>$this->mysqli->error, query=>$query);			
+		}
+		return $result;
+	}
+	*/
 }
 ?>

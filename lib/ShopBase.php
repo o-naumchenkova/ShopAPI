@@ -8,6 +8,14 @@ class ShopBase{
 		$this->db = new MySqlWork() ;
 	}
 	
+	//проверка результата выполнения запроса на ошибку
+	protected function is_query_error($result){
+		if(is_array($result) && array_key_exists("is_mysql_error", $result)){
+			return true;
+		}			
+		return false;
+	}
+	
 	//получить список товаров в категории
 	protected function get_category_products($category=1, $only_unique=true){
 		$query = "call GetCategoryProducts({?})";
@@ -35,23 +43,23 @@ class ShopBase{
 	}
 	
 	//Добавить товар
-	protected function add_product($name, $is_enbaled=1, $annonce=NULL, $desciption=NULL){
+	protected function add_product($name, $is_enabled=1, $annonce=NULL, $desciption=NULL){
 		$query = "INSERT INTO `shop_product` (`name`, `is_enabled`, `announce`, `description`)".
 				" VALUES ({?}, {?}, {?}, {?})";
-		$result = $this->db->querySimple($query, array($name, $is_enbaled, $annonce, $desciption));
+		$result = $this->db->querySimple($query, array($name, $is_enabled, $annonce, $desciption));
 		
 		return $result;
 	}
 	
 	//Обновить товар
-	protected function update_product($id, $name, $is_enbaled=1, $annonce=NULL, $desciption=NULL){
+	protected function update_product($id, $name, $is_enabled=1, $annonce=NULL, $desciption=NULL){
 		$query = "UPDATE `shop_product`". 
 				  "SET `is_enabled`={?},
 						`name`={?},
 						`announce`={?},
 						`description`={?} 
 				   WHERE `id`={?}";
-		$result = $this->db->querySimple($query, array($is_enbaled, $name, $annonce, $desciption, $id));
+		$result = $this->db->querySimple($query, array($is_enabled, $name, $annonce, $desciption, $id));
 		return $result;
 	}
 	
@@ -93,13 +101,13 @@ class ShopBase{
 	}
 	
 	//Обновить категорию
-	protected function update_category($id, $name, $parent, $is_enbaled=1){
+	protected function update_category($id, $name, $parent, $is_enabled=1){
 		$query = "UPDATE `shop_category`". 
 				  "SET `is_enabled`={?},
 						`name`={?},
 						`parent`={?}
 				   WHERE `id`={?}";
-		$result = $this->db->querySimple($query, array($is_enbaled, $name, $parent, $id));
+		$result = $this->db->querySimple($query, array($is_enabled, $name, $parent, $id));
 		return $result;
 	}
 	
@@ -148,6 +156,16 @@ class ShopBase{
 			$result = true;
 		}
 		return $result;
+	}
+	
+	protected function product_exists($product){
+		$query = "SELECT EXISTS (SELECT 1 FROM `shop_product` WHERE `id`={?} LIMIT 1)" ;
+		return $this->db->queryScalar($query, array($product));
+	}
+	
+	protected function category_exists($category){
+		$query = "SELECT EXISTS (SELECT 1 FROM `shop_category` WHERE `id`={?} LIMIT 1)" ;
+		return $this->db->queryScalar($query, array($category));
 	}
 }
 ?>
