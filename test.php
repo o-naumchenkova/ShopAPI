@@ -1,6 +1,6 @@
 <?php
 $params = Array(
-		"action"   	=> "get_all_categories",            // Внутренний ID заказа
+		"action"   	=> "get_all_categories",           
 		"params"	=> []
 		);
 
