@@ -8,14 +8,6 @@ class ShopBase{
 		$this->db = new MySqlWork() ;
 	}
 	
-	//проверка результата выполнения запроса на ошибку
-	protected function is_query_error($result){
-		if(is_array($result) && array_key_exists("is_mysql_error", $result)){
-			return true;
-		}			
-		return false;
-	}
-	
 	//получить список товаров в категории
 	protected function get_category_products($category=1, $only_unique=true){
 		$query = "call GetCategoryProducts({?})";
