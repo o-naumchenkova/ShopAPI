@@ -91,30 +91,5 @@ class MySqlWork{
 		}
 		return $result;
 	}
-  
-	/*
-	public function query($query, $params = false) {
-		$query = $this->prepareQuery($query, $params) ;
-		//print_r($this->prepareQuery($query, $params));
-	//	return ; 
-		$success = $this->mysqli->query($query) ;
-
-		if ($success) {
-			if($this->mysqli->insert_id === 0){
-				if($this->mysqli->affected_rows){
-					$result = $this->resultToArray($success);
-				}else{
-					$result = true;
-				}
-			}else{
-				$result = $this->mysqli->insert_id;				
-			}
-		}
-		else {
-			$result = array(is_error=>1, error_text=>$this->mysqli->error, query=>$query);			
-		}
-		return $result;
-	}
-	*/
 }
 ?>
