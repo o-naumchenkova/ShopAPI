@@ -16,12 +16,10 @@ class MySqlWork{
 	private function _connect(){
 		
 		$this->mysqli = new mysqli($this->host, $this->user, $this->password, $this->database); 
-		if (mysqli_connect_errno()) { 
-		   echo "Ошибка подключения к серверу MySQL:".mysqli_connect_error(); 
-		   exit; 
+		if ($this->mysqli->connect_errno) { 
+		   throw new Exception("Ошибка подключения к серверу MySQL:".$this->mysqli->connect_error, $this->mysqli->connect_errno); 
 		} 
 	}
-	
 	
 	private function resultToArray($result) {
 		$array = array();

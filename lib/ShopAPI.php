@@ -45,6 +45,9 @@ class ShopAPI extends ShopBase{
 	
 	public function GetCategories($category=1){					
 		if(is_numeric($category)){
+			if(!$this->category_exists((int)$category)){
+				throw new Exception("Категория с идентификатором {$category} не найдена", -1);
+			}
 			$result = array();
 			$categories = $this->get_categories((int)$category);
 			if(is_array($categories) && !empty($categories)){
@@ -65,6 +68,9 @@ class ShopAPI extends ShopBase{
 	
 	public function GetCategoryProducts($category=1){					
 		if(is_numeric($category)){
+			if(!$this->category_exists((int)$category)){
+				throw new Exception("Категория с идентификатором {$category} не найдена", -1);
+			}
 			$result = array();
 			$products = $this->get_category_products((int)$category);
 			$result["products"] = $products;
@@ -111,9 +117,12 @@ class ShopAPI extends ShopBase{
 	public function AddCategoryProduct($category, $product){
 		if($this->IsCategoryProductParamsCorrect($category, $product)){
 			if(!$this->category_exists($category)) 
-				throw new Exception("Товар не добавлен в категорию: не найдена категория {$category}");
+				throw new Exception("Товар не добавлен в категорию: не найдена категория {$category}", -1);
 			if(!$this->product_exists($product)) 
-				throw new Exception("Товар не добавлен в категорию: не найден товар {$product}");
+				throw new Exception("Товар не добавлен в категорию: не найден товар {$product}", -1);
+			if($this->category_product_exists($category, $product))
+				throw new Exception("Товар {$product} уже содержится в категории {$category}", -1);
+			
 			$result = $this->add_category_product($category, $product);
 		}  else{
 			throw new Exception("Товар не добавлен в категорию: некорректные параметры", -1);
@@ -123,14 +132,16 @@ class ShopAPI extends ShopBase{
 
 	public function DeleteCategoryProduct($category, $product){
 		if(!$this->category_exists($category)) 
-			throw new Exception("Товар не удален из категории: не найдена категория {$category}");
+			throw new Exception("Товар не удален из категории: не найдена категория {$category}", -1);
 		if(!$this->product_exists($product)) 
-			throw new Exception("Товар не удален из категории: не найден товар {$product}");
+			throw new Exception("Товар не удален из категории: не найден товар {$product}", -1);
 		return $this->delete_category_product($category, $product);
 	}
 	
 	public function AddCategory($name, $parent, $is_enabled=1){
 		if($this->IsCategoryParamsCorrect($name, $parent, $is_enabled)){
+			if(!$this->category_exists($parent))
+				throw new Exception("Категория не добавлена: не найдена родительская категория {$parent}", -1);
 			$result = $this->add_category($name, $parent, $is_enabled);
 			$this->RESPONSE = $result;
 		} else{
@@ -142,7 +153,7 @@ class ShopAPI extends ShopBase{
 	public function UpdateCategory($id, $name, $parent, $is_enabled=1){
 		if($this->IsCategoryParamsCorrect($name, $parent, $is_enabled)){
 			if(!$this->category_exists($id)) 
-				throw new Exception("Категория не обновлена: не найдена категория {$id}");
+				throw new Exception("Категория не обновлена: не найдена категория {$id}", -1);
 			$result = $this->update_category($id, $name, $parent, $is_enabled);
 		}else{
 			throw new Exception("Категория не обновлена: некорректные параметры", -1);
@@ -154,7 +165,7 @@ class ShopAPI extends ShopBase{
 	//иначе - не удаляет категорию, в которой имеются товары
 	public function DeleteCategory($id, $only_empty=true){
 		if(!$this->category_exists($id)) 
-			throw new Exception("Категория удалить не удалось: не найдена категория {$id}");
+			throw new Exception("Категорию удалить не удалось: не найдена категория {$id}", -1);
 		$result = $this->delete_category($id, $only_empty);
 		if($result===false){
 			throw new Exception("Категорию удалить не удалось. Возможно, в ней содержатся товары или подкатегории", -1);
